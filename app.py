@@ -35,6 +35,7 @@ class NaturalLanguageInputWidget(QWidget):
         self.browse_line_edit = QLineEdit()
         browse_button = QPushButton("Browse")
         browse_button.clicked.connect(self.browse_project_location)
+        browse_button.setStyleSheet("background-color: #48b7d2;")
         layout.addWidget(browse_label)
         layout.addWidget(self.browse_line_edit)
         layout.addWidget(browse_button)
@@ -54,9 +55,11 @@ class NaturalLanguageInputWidget(QWidget):
         # Generate button
         generate_button = QPushButton("Generate")
         generate_button.clicked.connect(self.generate_project_from_description)
+        generate_button.setStyleSheet("background-color: #23DB27;")
         layout.addWidget(generate_button)
 
         self.setLayout(layout)
+        # self.setStyleSheet("background-color: lightgreen;")
 
     def browse_project_location(self):
         directory = QFileDialog.getExistingDirectory(self, "Select Project Location")
@@ -151,10 +154,12 @@ class CodeEditorTab(QWidget):
         input_layout.addWidget(self.language_input)
 
         self.generate_button = QPushButton("Generate")
+        self.generate_button.setStyleSheet("background-color: #23DB27;")
         self.generate_button.clicked.connect(self.generate_code)
         input_layout.addWidget(self.generate_button)
 
         self.install_libraries_button = QPushButton("Install Libraries")
+        self.install_libraries_button.setStyleSheet("background-color: #9BFC05;")
         self.install_libraries_button.clicked.connect(self.install_libraries)
         input_layout.addWidget(self.install_libraries_button)
 
@@ -186,7 +191,7 @@ class CodeEditor(QMainWindow):
         self.init_output_panel()
         self.init_solution_panel()
         self.init_status_bar()
-
+        self.init_vertical_menu()
         self.setWindowTitle("NLP Code Editor")
         self.setGeometry(100, 100, 800, 600)
 
@@ -332,6 +337,42 @@ class CodeEditor(QMainWindow):
         solution_action.triggered.connect(self.show_solution)
         toolbar.addAction(solution_action)
 
+    def init_vertical_menu(self):
+        vertical_menu = QToolBar("Vertical Menu", self)
+        vertical_menu.setOrientation(Qt.Vertical)
+        vertical_menu.setIconSize(QSize(48, 48))
+        vertical_menu.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
+
+        natural_language_input_button = QToolButton()
+        natural_language_input_button.setText("")
+        natural_language_input_button.setCheckable(True)
+        natural_language_input_button.setChecked(True)
+        natural_language_input_button.clicked.connect(self.toggle_natural_language_input)
+        vertical_menu.addWidget(natural_language_input_button)
+
+        project_explorer_button = QToolButton()
+        project_explorer_button.setText("")
+        project_explorer_button.setCheckable(True)
+        project_explorer_button.setChecked(True)
+        project_explorer_button.clicked.connect(self.toggle_project_explorer)
+        vertical_menu.addWidget(project_explorer_button)
+
+        output_panel_button = QToolButton()
+        output_panel_button.setText("")
+        output_panel_button.setCheckable(True)
+        output_panel_button.setChecked(True)
+        output_panel_button.clicked.connect(self.toggle_output_panel)
+        vertical_menu.addWidget(output_panel_button)
+
+        solution_panel_button = QToolButton()
+        solution_panel_button.setText("")
+        solution_panel_button.setCheckable(True)
+        solution_panel_button.setChecked(True)
+        solution_panel_button.clicked.connect(self.toggle_solution_panel)
+        vertical_menu.addWidget(solution_panel_button)
+
+        self.addToolBar(Qt.LeftToolBarArea, vertical_menu)
+
 
 
     def init_code_editor(self):
@@ -370,6 +411,11 @@ class CodeEditor(QMainWindow):
     def init_project_explorer(self):
         self.project_explorer = QDockWidget("Project Explorer", self)
         self.addDockWidget(Qt.LeftDockWidgetArea, self.project_explorer)
+
+     # Disable the close button and float button, keeping the title at the top
+        self.project_explorer.setFeatures(QDockWidget.DockWidgetMovable | QDockWidget.DockWidgetClosable)
+        self.project_explorer.setTitleBarWidget(QWidget(self.project_explorer))
+
 
         file_system_model = QFileSystemModel()
         file_system_model.setRootPath("")
@@ -461,10 +507,15 @@ class CodeEditor(QMainWindow):
 
     def init_natural_language_input(self):
         self.natural_language_input_widget = NaturalLanguageInputWidget(self)
+        
 
         natural_language_input_dock = QDockWidget("Natural Language Input", self)
         natural_language_input_dock.setWidget(self.natural_language_input_widget)
         self.addDockWidget(Qt.TopDockWidgetArea, natural_language_input_dock)
+
+     # Disable the close button and float button, keeping the title at the top
+        natural_language_input_dock.setFeatures(QDockWidget.DockWidgetMovable | QDockWidget.DockWidgetClosable)
+        natural_language_input_dock.setTitleBarWidget(QWidget(natural_language_input_dock))
             
     # def init_output_panel(self):
     #     self.output_panel = QDockWidget("Output Panel", self)
@@ -491,6 +542,11 @@ class CodeEditor(QMainWindow):
     def init_output_panel(self):
         self.output_panel = QDockWidget("Output Panel", self)
         self.addDockWidget(Qt.BottomDockWidgetArea, self.output_panel)
+
+     # Disable the close button and float button, keeping the title at the top
+        self.output_panel.setFeatures(QDockWidget.DockWidgetMovable | QDockWidget.DockWidgetClosable)
+        self.output_panel.setTitleBarWidget(QWidget(self.output_panel))
+
 
         # Split the output panel into two parts: Output & Terminal
         splitter = QSplitter(Qt.Horizontal)
@@ -534,16 +590,22 @@ class CodeEditor(QMainWindow):
         self.solution_panel = QDockWidget("Solution", self)
         self.addDockWidget(Qt.BottomDockWidgetArea, self.solution_panel)
 
+     # Disable the close button and float button, keeping the title at the top
+        self.solution_panel.setFeatures(QDockWidget.DockWidgetMovable | QDockWidget.DockWidgetClosable)
+        self.solution_panel.setTitleBarWidget(QWidget(self.solution_panel))
+
+
         solution_widget = QWidget()
         solution_layout = QVBoxLayout()
 
         self.solution_text_edit = QTextEdit()
         self.solution_text_edit.setReadOnly(True)
-        self.solution_text_edit.setStyleSheet("QTextEdit { background-color: green; color: black; }")
+        self.solution_text_edit.setStyleSheet("QTextEdit { background-color: #69FC6C; color: black; }")
         solution_layout.addWidget(self.solution_text_edit)
 
         self.solution_button = QPushButton("Get Solution")
         # self.solution_button.clicked.connect(self.show_solution)
+        self.solution_button.setStyleSheet("background-color: #21D225;")
         self.solution_button.clicked.connect(self.generate_solution)
 
         solution_layout.addWidget(self.solution_button)
