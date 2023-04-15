@@ -2,8 +2,10 @@ import sys
 import subprocess
 import tempfile
 import os
-from error_solution import Args, args, run_predict, predict_from_text
-
+# from error_solution import Args, args, run_predict, predict_from_text
+from PyQt5.QtWidgets import QPlainTextEdit, QTextEdit, QVBoxLayout, QHBoxLayout, QWidget, QPushButton, QLineEdit
+from PyQt5.QtCore import QRect, Qt, QPoint
+from PyQt5.QtGui import QColor, QTextCursor
 # from qtermwidget import QTermWidget
 
 from PyQt5.QtCore import *
@@ -134,6 +136,95 @@ class TerminalWidget(QWidget):
         self.text_edit.append("\n")
         self.text_edit.verticalScrollBar().setValue(self.text_edit.verticalScrollBar().maximum())
 
+
+class ResizableSelectionBoxCodeEditor(QPlainTextEdit):
+    def __init__(self, *args, **kwargs):
+        super(ResizableSelectionBoxCodeEditor, self).__init__(*args, **kwargs)
+        self.selection_box = QRubberBand(QRubberBand.Rectangle, self)
+        self.selection_box.setGeometry(0, 0, self.viewport().width(), 50)
+        self.selection_box.show()
+        self.drag_start_position = None
+        self.resize_start_position = None
+        self.resize_margin = 5
+
+
+    def resizeEvent(self, event):
+        super(ResizableSelectionBoxCodeEditor, self).resizeEvent(event)
+        self.selection_box.setGeometry(0, self.selection_box.y(), self.viewport().width(), self.selection_box.height())
+
+    def scrollContentsBy(self, dx, dy):
+        super(ResizableSelectionBoxCodeEditor, self).scrollContentsBy(dx, dy)
+        self.selection_box.move(0, self.selection_box.y() - dy)
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            if self.selection_box.geometry().contains(event.pos()):
+                if abs(event.pos().y() - self.selection_box.y()) <= self.resize_margin:
+                    # Top edge clicked
+                    self.resize_start_position = event.pos()
+                    self.setCursor(Qt.SizeVerCursor)
+                elif abs(event.pos().y() - self.selection_box.y() - self.selection_box.height()) <= self.resize_margin:
+                    # Bottom edge clicked
+                    self.resize_start_position = event.pos()
+                    self.setCursor(Qt.SizeVerCursor)
+                else:
+                    self.drag_start_position = event.pos()
+                event.accept()
+            else:
+                super(ResizableSelectionBoxCodeEditor, self).mousePressEvent(event)
+        else:
+            super(ResizableSelectionBoxCodeEditor, self).mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        if self.drag_start_position is not None:
+            dy = event.pos().y() - self.drag_start_position.y()
+            new_y = self.selection_box.y() + dy
+            self.selection_box.move(0, new_y)
+            self.drag_start_position = event.pos()
+            event.accept()
+        elif self.resize_start_position is not None:
+            dy = event.pos().y() - self.resize_start_position.y()
+            new_height = self.selection_box.height() + dy
+            if event.pos().y() < self.selection_box.y():
+                # Top edge dragged
+                new_y = self.selection_box.y() + dy
+                self.selection_box.setGeometry(0, new_y, self.selection_box.width(), new_height)
+            else:
+                # Bottom edge dragged
+                self.selection_box.resize(self.selection_box.width(), new_height)
+            self.resize_start_position = event.pos()
+            event.accept()
+        else:
+            super(ResizableSelectionBoxCodeEditor, self).mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            if self.drag_start_position is not None:
+                self.drag_start_position = None
+                event.accept()
+            elif self.resize_start_position is not None:
+                self.resize_start_position = None
+                self.unsetCursor()
+                event.accept()
+            else:
+                super(ResizableSelectionBoxCodeEditor, self).mouseReleaseEvent(event)
+        else:
+            super(ResizableSelectionBoxCodeEditor, self).mouseReleaseEvent(event)
+
+    def get_covered_lines(self):
+        start_line = self.firstVisibleBlock().blockNumber()
+        y = self.selection_box.y()
+        start_line += round(y / self.fontMetrics().height())
+        end_line = start_line + round(self.selection_box.height() / self.fontMetrics().height())
+
+        return start_line, end_line
+
+    def get_covered_columns(self):
+        start_col = round(self.selection_box.x() / self.fontMetrics().horizontalAdvance(' '))
+        end_col = start_col + round(self.selection_box.width() / self.fontMetrics().horizontalAdvance(' '))
+
+        return start_col, end_col
+
 class CodeEditorTab(QWidget):
     def __init__(self, file_path=None, content=None):
         super().__init__()
@@ -142,7 +233,7 @@ class CodeEditorTab(QWidget):
 
         layout = QVBoxLayout()
 
-        self.code_editor = QPlainTextEdit()
+        self.code_editor = ResizableSelectionBoxCodeEditor()
         if content:
             self.code_editor.setPlainText(content)
         layout.addWidget(self.code_editor)
@@ -158,22 +249,79 @@ class CodeEditorTab(QWidget):
         self.generate_button.clicked.connect(self.generate_code)
         input_layout.addWidget(self.generate_button)
 
+        self.selection_box_toggle = QPushButton()
+        self.selection_box_toggle.setCheckable(True)
+        self.selection_box_toggle.setFixedSize(20, 20)
+        self.selection_box_toggle.setStyleSheet("""
+            QPushButton {
+                background-color: #007BFF;
+                border-radius: 10px;
+                box-shadow: 3px 3px 5px rgba(0, 0, 0, 0.2);
+            }
+            QPushButton:checked {
+                background-color: #0056B3;
+                border-radius: 10px;
+                box-shadow: inset 3px 3px 5px rgba(0, 0, 0, 0.2);
+            }
+        """)
+        self.selection_box_toggle.toggled.connect(self.toggle_selection_box)
+        input_layout.addWidget(self.selection_box_toggle)
+
         self.install_libraries_button = QPushButton("Install Libraries")
         self.install_libraries_button.setStyleSheet("background-color: #9BFC05;")
         self.install_libraries_button.clicked.connect(self.install_libraries)
         input_layout.addWidget(self.install_libraries_button)
 
+        self.import_libraries_button = QPushButton("Import Libraries")
+        self.import_libraries_button.setStyleSheet("background-color: #0BD7FF;")
+        self.import_libraries_button.clicked.connect(self.import_libraries)
+        input_layout.addWidget(self.import_libraries_button)
+
         layout.addLayout(input_layout)
 
         self.setLayout(layout)
 
+
     def generate_code(self):
-        # Add the code to generate code based on the natural language input here
-        pass
+        try:
+            # If the radio button is checked, use the text within the selection box
+            if self.selection_box_toggle.isChecked():
+                start_line, end_line = self.code_editor.get_covered_lines()
+                start_col, end_col = self.code_editor.get_covered_columns()
+
+                lines = self.code_editor.toPlainText().splitlines()
+                selected_lines = lines[start_line:end_line + 1]
+
+                # Trim the lines based on the start and end columns
+                selected_lines[0] = selected_lines[0][start_col:]
+                selected_lines[-1] = selected_lines[-1][:end_col]
+
+                selected_text = "\n".join(selected_lines)
+
+                with open("demo1.txt", "w") as file:
+                    file.write(selected_text)
+            # If the radio button is not checked, use the whole content of the tab
+            else:
+                content = self.code_editor.toPlainText()
+                with open("demo.txt", "w") as file:
+                    file.write(content)
+        except Exception as e:
+            print("Error:", e)
+
 
     def install_libraries(self):
         # Add the code to install libraries here
         pass
+
+    def import_libraries(self):
+        # Add the code to import libraries here
+        pass
+
+    def toggle_selection_box(self, checked):
+        if checked:
+            self.code_editor.selection_box.show()
+        else:
+            self.code_editor.selection_box.hide()
 
 
 class CodeEditor(QMainWindow):
