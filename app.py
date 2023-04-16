@@ -2,7 +2,14 @@ import sys
 import subprocess
 import tempfile
 import os
+import json
 from error_solution import Args, args, run_predict, predict_from_text
+from app_file_create import Args, args, predict_from_text
+from create_files import create_file_structure
+from app_code_generate import predict_from_text, Args
+from write_into_files import write_code_to_files
+
+
 from PyQt5.QtWidgets import QPlainTextEdit, QTextEdit, QVBoxLayout, QHBoxLayout, QWidget, QPushButton, QLineEdit
 from PyQt5.QtCore import QRect, Qt, QPoint
 from PyQt5.QtGui import QColor, QTextCursor
@@ -71,15 +78,45 @@ class NaturalLanguageInputWidget(QWidget):
             self.browse_line_edit.setText(directory)
 
     def generate_project_from_description(self):
-        location = self.browse_line_edit.text()
+        project_location = self.browse_line_edit.text()
         project_name = self.project_name_line_edit.text()
-        description = self.project_description_line_edit.text()
+        project_description = self.project_description_line_edit.text()
 
-        # Your code to generate the project based on the description
-        # For now, just print the inputs
-        print("Location:", location)
-        print("Project Name:", project_name)
-        print("Description:", description)
+        if not project_location or not project_name or not project_description:
+            QMessageBox.information(self, "Error", "Please fill in all fields.")
+            return
+
+        project_folder = os.path.join(project_location, project_name)
+        os.makedirs(project_folder, exist_ok=True)
+
+        # file_structure_str = predict_from_text(args, f"{project_description}")
+        
+        file_structure_waste={"app.py":"","templates": {"index.html":""}}
+
+        # file_structure = json.loads(file_structure_str)
+
+        # create_file_structure(project_folder, file_structure)
+       
+        create_file_structure(project_folder, file_structure_waste)
+
+        # Generate code for the file structure
+        # code_structure_input = f"'''{project_description} <FILE_STRUCTURE> {file_structure_str}'''"
+
+        # code_structure_str = predict_from_text(args, code_structure_input)
+        code_structure_dict={
+            "app.py": "with open('input_file.txt', 'r') as file:\n    lines = file.readlines()\n    line_count = len(lines)\n    print(f'Number of lines: {line_count}')",
+            "templates/index.html": "def double_count(count):\n    return count * 2"
+        }
+        # try:
+        #     code_structure_dict = json.loads(code_structure_str)
+        # except json.JSONDecodeError as e:
+        #     QMessageBox.critical(self, "Error", f"An error occurred while decoding the code structure: {str(e)}")
+        #     return
+
+        # Write the generated code to the created file structure
+        write_code_to_files(project_folder, code_structure_dict)
+
+        QMessageBox.information(self, "Success", f"Project '{project_name}' has been generated at {project_folder}.")
 
 
 # class TerminalWidget(QPlainTextEdit):
@@ -747,7 +784,7 @@ class CodeEditor(QMainWindow):
             error_message_single_line = full_error_message.replace('\n', ' ')
 
             # Wrap the error_message_single_line in triple quotes
-            
+
             # error_message_quoted = f"'''{error_message_single_line}'''"
             error_message_quoted = f"'''{full_error_message}'''"
 
@@ -757,7 +794,7 @@ class CodeEditor(QMainWindow):
             self.solution_text_edit.append("Error:\n"+full_error_message+"\n\n\nSolution:\n" + solution)
 
         except Exception as e:
-            QMessageBox.critical(self, "Error", f" {str(e)}")
+            QMessageBox.critical(self, "Error", f"Error: {str(e)}")
 
 
     def init_solution_panel(self):

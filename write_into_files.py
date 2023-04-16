@@ -2,8 +2,8 @@ import os
 
 # Define the code for each file
 code_structure = {
-    "main.py": "with open('input_file.txt', 'r') as file:\n    lines = file.readlines()\n    line_count = len(lines)\n    print(f'Number of lines: {line_count}')",
-    "utilities/utility.py": "def double_count(count):\n    return count * 2"
+    "app.py": "with open('input_file.txt', 'r') as file:\n    lines = file.readlines()\n    line_count = len(lines)\n    print(f'Number of lines: {line_count}')",
+    "templates/index.html": "def double_count(count):\n    return count * 2"
 }
 
 def write_code_to_files(parent_dir, code_structure):

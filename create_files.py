@@ -3,11 +3,8 @@ import os
 
 # with open('files/p1.txt', 'r') as f:
 #     file_structure = json.load(f)
-file_structure={"main.py":"","utilities":{"utility.py":""}}
+# file_structure={"app.py":"","templates": {"index.html":""}}
 def create_file_structure(parent_dir, file_structure):
-    """
-    Recursively create the file structure defined by a nested dictionary.
-    """
     for name, value in file_structure.items():
         if isinstance(value, dict):
             # If the value is a dictionary, create a subdirectory and recursively call this function.
@@ -22,7 +19,7 @@ def create_file_structure(parent_dir, file_structure):
                 pass  # Do nothing, just create an empty file.
 
 # Set the name of the root directory
-root_dir = 'projects'
+# root_dir = 'mithoon/nsm'
 
-# Create the file structure in the current working directory.
-create_file_structure(root_dir, file_structure)
+# # Create the file structure in the current working directory.
+# create_file_structure(root_dir, file_structure)
