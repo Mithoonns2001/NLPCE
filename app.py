@@ -2,7 +2,7 @@ import sys
 import subprocess
 import tempfile
 import os
-# from error_solution import Args, args, run_predict, predict_from_text
+from error_solution import Args, args, run_predict, predict_from_text
 from PyQt5.QtWidgets import QPlainTextEdit, QTextEdit, QVBoxLayout, QHBoxLayout, QWidget, QPushButton, QLineEdit
 from PyQt5.QtCore import QRect, Qt, QPoint
 from PyQt5.QtGui import QColor, QTextCursor
@@ -15,6 +15,8 @@ from PyQt5.QtWidgets import (QMainWindow, QAction, QMenu, QMenuBar, QDockWidget,
                              QFileSystemModel, QLineEdit, QTextBrowser, QApplication, QTextEdit, QStatusBar,
                              QInputDialog, QMessageBox, QFileDialog, QToolBar, QVBoxLayout, QWidget, QDialog, QPushButton, QLabel, QComboBox )
 from PyQt5.QtWidgets import *
+
+
 class OutputPanel(QPlainTextEdit):
     def __init__(self, *args, **kwargs):
         super(OutputPanel, self).__init__(*args, **kwargs)
@@ -341,7 +343,7 @@ class CodeEditor(QMainWindow):
         self.init_status_bar()
         self.init_vertical_menu()
         self.setWindowTitle("NLP Code Editor")
-        self.setGeometry(100, 100, 800, 600)
+        self.showMaximized()
 
     def init_menu_bar(self):
         menu_bar = self.menuBar()
@@ -715,23 +717,47 @@ class CodeEditor(QMainWindow):
         self.process.write(text.encode())
 ########
     def generate_solution(self):
-        error_text = self.output.toPlainText()
-        if not error_text:
-            QMessageBox.information(self, "Solution", "There is no error to generate a solution for.")
-            return
+        try:
+            error_text = self.output.toPlainText()
+            if not error_text:
+                QMessageBox.information(self, "Solution", "There is no error to generate a solution for.")
+                return
 
-        error_lines = error_text.split("\n")
-        for line in error_lines:
-            if line.startswith("Error:"):
-                error_message = line[6:].strip()
-                break
-        else:
-            QMessageBox.information(self, "Solution", "No error message found in the output.")
-            return
+            error_lines = error_text.split("\n")
+            error_message_lines = []
+            collecting_error_message = False
 
-        solution = predict_from_text(args, error_message)
-        self.solution.clear()
-        self.solution.append("Solution:\n" + solution)
+            for line in error_lines:
+                if line.startswith("Error:"):
+                    collecting_error_message = True
+                    error_message = line[6:].strip()
+                    error_message_lines.append(error_message)
+                elif collecting_error_message:
+                    if line.strip() == "":
+                        break
+                    error_message_lines.append(line.strip())
+            else:
+                QMessageBox.information(self, "Solution", "No error message found in the output.")
+                return
+
+            # error_message_lines now contains all the lines after "Error:" until an empty line
+            full_error_message = '\n'.join(error_message_lines)
+
+            # Replace newline characters with spaces to make the error_message a single line
+            error_message_single_line = full_error_message.replace('\n', ' ')
+
+            # Wrap the error_message_single_line in triple quotes
+            
+            # error_message_quoted = f"'''{error_message_single_line}'''"
+            error_message_quoted = f"'''{full_error_message}'''"
+
+            solution = predict_from_text(args, error_message_quoted)
+            # sol=f"'''{solution}'''"
+            self.solution_text_edit.clear()
+            self.solution_text_edit.append("Error:\n"+full_error_message+"\n\n\nSolution:\n" + solution)
+
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f" {str(e)}")
 
 
     def init_solution_panel(self):
