@@ -1,4 +1,9 @@
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 from transformers import TFT5ForConditionalGeneration, RobertaTokenizer
+
+import tensorflow as tf
+tf.compat.v1.logging.set_verbosity(tf.compat.v1.logging.ERROR)
 
 class Args:
     train_batch_size = 8
@@ -7,7 +12,7 @@ class Args:
     max_target_length = 128
     prefix = "Generate Python: "    
 
-    save_dir="path/to/saved_model"
+    save_dir="C:\\Users\\NAGARAJAN K\\Desktop\\NLPCE\\saved_model"
 
 args = Args()
 
@@ -28,6 +33,12 @@ def run_predict(args, text):
 
 def predict_from_text(args, text):
     decoded_code = run_predict(args, text)
-    print("#" * 25); print("QUERY: ", text); 
-    print()
-    print('#' * 25); print("GENERATED: "); print("\n", decoded_code);
+    # print("Error: ", text); 
+    # print()
+    # print('#' * 25); print("Solution: "); 
+    # print(decoded_code);
+    return decoded_code
+
+# sol=predict_from_text(args, '''"build portfolio using flask." <FILE_STRUCTURE> "{"app.py": "", "templates": {"about.html": "", "add.html": "", "error.html": "", "layout.html": "", "navbar.html": "", "portfolio.html": "", "result.html": "", "student.html": ""}}"'''); print()
+# print(sol)
+# print(predict_from_text(args, '''"build portfolio using flask." <FILE_STRUCTURE> "{"app.py": "", "templates": {"about.html": "", "add.html": "", "error.html": "", "layout.html": "", "navbar.html": "", "portfolio.html": "", "result.html": "", "student.html": ""}}"'''))
