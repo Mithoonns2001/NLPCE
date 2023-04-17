@@ -417,10 +417,28 @@ class CodeEditorTab(QWidget):
 
     def import_libraries(self):
         try:
-            content = self.code_editor.toPlainText()
-            # generated_output = predict_from_text(args, content)
+            # If the radio button is checked, use the text within the selection box
+            if self.selection_box_toggle.isChecked():
+                start_line, end_line = self.code_editor.get_covered_lines()
+                start_col, end_col = self.code_editor.get_covered_columns()
 
-            generated_output="import json\nfrom PyQt5.QtGui import *\nimport os\nimport sys"
+                lines = self.code_editor.toPlainText().splitlines()
+                selected_lines = lines[start_line:end_line + 1]
+
+                # Trim the lines based on the start and end columns
+                selected_lines[0] = selected_lines[0][start_col:]
+                selected_lines[-1] = selected_lines[-1][:end_col]
+
+                selected_text = "\n".join(selected_lines)
+
+                # generated_output = predict_from_text(args, selected_text)
+                generated_output="import json\nfrom PyQt5.QtGui import *\nimport os\nimport sys"
+            # If the radio button is not checked, use the whole content of the tab
+            else:
+                content = self.code_editor.toPlainText()
+                # generated_output = predict_from_text(args, content)
+                generated_output="import json\nimport os\nimport sys"
+            
             self.process_imports_output(generated_output)
         except Exception as e:
             print("Error:", e)
