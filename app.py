@@ -3,11 +3,13 @@ import subprocess
 import tempfile
 import os
 import json
-from error_solution import Args, args, run_predict, predict_from_text
-from app_file_create import Args, args, predict_from_text
+# from error_solution import Args, args, run_predict, predict_from_text
+# from app_file_create import Args, args, predict_from_text
 from create_files import create_file_structure
-from app_code_generate import predict_from_text, Args
+# from app_code_generate import predict_from_text, Args
 from write_into_files import write_code_to_files
+# from app_selection_box import predict_from_text, Args, args
+
 
 
 from PyQt5.QtWidgets import QPlainTextEdit, QTextEdit, QVBoxLayout, QHBoxLayout, QWidget, QPushButton, QLineEdit
@@ -176,6 +178,31 @@ class TerminalWidget(QWidget):
         self.text_edit.verticalScrollBar().setValue(self.text_edit.verticalScrollBar().maximum())
 
 
+class InstallLibrariesDialog(QDialog):
+    def __init__(self, libraries):
+        super().__init__()
+
+        self.setWindowTitle("Install Libraries")
+        layout = QVBoxLayout()
+
+        self.checkboxes = []
+
+        for library in libraries:
+            checkbox = QCheckBox(f"pip install {library}")
+            layout.addWidget(checkbox)
+            self.checkboxes.append(checkbox)
+
+        button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        button_box.accepted.connect(self.accept)
+        button_box.rejected.connect(self.reject)
+        layout.addWidget(button_box)
+
+        self.setLayout(layout)
+
+    def get_selected_libraries(self):
+        selected_libraries = [checkbox.text() for checkbox in self.checkboxes if checkbox.isChecked()]
+        return selected_libraries
+
 class ResizableSelectionBoxCodeEditor(QPlainTextEdit):
     def __init__(self, *args, **kwargs):
         super(ResizableSelectionBoxCodeEditor, self).__init__(*args, **kwargs)
@@ -339,18 +366,54 @@ class CodeEditorTab(QWidget):
 
                 with open("demo1.txt", "w") as file:
                     file.write(selected_text)
+
+                # # Generate code from the selected text
+                # generated_code = predict_from_text(args, selected_text)
+
+                generated_code= "generated.........."
+
+                # Replace the selected code with the generated code
+                replaced_lines = lines[:start_line] + generated_code.splitlines() + lines[end_line + 1:]
+                replaced_code = "\n".join(replaced_lines)
+                self.code_editor.setPlainText(replaced_code)
+
             # If the radio button is not checked, use the whole content of the tab
             else:
                 content = self.code_editor.toPlainText()
                 with open("demo.txt", "w") as file:
                     file.write(content)
+                # # Generate code from the content
+                # generated_code = predict_from_text(args, content)
+
+                generated_code= "generated.........."
+
+                # Replace the content with the generated code
+                self.code_editor.setPlainText(generated_code)
+
         except Exception as e:
             print("Error:", e)
 
 
+
     def install_libraries(self):
-        # Add the code to install libraries here
-        pass
+        content = self.code_editor.toPlainText()
+        # generated_output = predict_from_text(args, content)
+        generated_output = '''{"numpy", "pandas", "matplotlib"}'''
+        try:
+            libraries = eval(generated_output)
+        except:
+            QMessageBox.warning(self, "Error", "Failed to parse the generated output.")
+            return
+
+        install_dialog = InstallLibrariesDialog(libraries)
+        result = install_dialog.exec()
+
+        if result == QDialog.Accepted:
+            selected_libraries = install_dialog.get_selected_libraries()
+            for library in selected_libraries:
+                os.system(library)
+
+
 
     def import_libraries(self):
         # Add the code to import libraries here
