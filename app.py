@@ -416,8 +416,20 @@ class CodeEditorTab(QWidget):
 
 
     def import_libraries(self):
-        # Add the code to import libraries here
-        pass
+        try:
+            content = self.code_editor.toPlainText()
+            # generated_output = predict_from_text(args, content)
+
+            generated_output="import json\nfrom PyQt5.QtGui import *\nimport os\nimport sys"
+            self.process_imports_output(generated_output)
+        except Exception as e:
+            print("Error:", e)
+
+    def process_imports_output(self, output):
+        imports = output.strip().split('\n')
+        current_content = self.code_editor.toPlainText()
+        new_content = "\n".join(imports) + "\n" + current_content
+        self.code_editor.setPlainText(new_content)
 
     def toggle_selection_box(self, checked):
         if checked:
